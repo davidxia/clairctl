@@ -87,12 +87,11 @@ func (v vulnerabiliesCounts) RelativeCount(severity string) float64 {
 func allVulnerabilities(imageAnalysis ImageAnalysis) vulnerabiliesCounts {
 	result := make(vulnerabiliesCounts)
 
-	l := imageAnalysis.Layers[len(imageAnalysis.Layers)-1]
-
-	for _, f := range l.Layer.Features {
-
-		for _, v := range f.Vulnerabilities {
-			result[types.Priority(v.Severity)]++
+	for _, l := range imageAnalysis.Layers {
+		for _, f := range l.Layer.Features {
+			for _, v := range f.Vulnerabilities {
+				result[types.Priority(v.Severity)]++
+			}
 		}
 	}
 
@@ -104,11 +103,12 @@ func vulnerabilities(imageAnalysis ImageAnalysis) map[types.Priority][]vulnerabi
 
 	result := make(map[types.Priority][]vulnerabilityWithFeature)
 
-	l := imageAnalysis.Layers[len(imageAnalysis.Layers)-1]
-	for _, f := range l.Layer.Features {
-		for _, v := range f.Vulnerabilities {
+	for _, l := range imageAnalysis.Layers {
+		for _, f := range l.Layer.Features {
+			for _, v := range f.Vulnerabilities {
 
-			result[types.Priority(v.Severity)] = append(result[types.Priority(v.Severity)], vulnerabilityWithFeature{Vulnerability: v, Feature: f.Name + ":" + f.Version})
+				result[types.Priority(v.Severity)] = append(result[types.Priority(v.Severity)], vulnerabilityWithFeature{Vulnerability: v, Feature: f.Name + ":" + f.Version})
+			}
 		}
 	}
 
@@ -119,21 +119,21 @@ func vulnerabilities(imageAnalysis ImageAnalysis) map[types.Priority][]vulnerabi
 func sortedVulnerabilities(imageAnalysis ImageAnalysis) []v1.Feature {
 	features := []v1.Feature{}
 
-	l := imageAnalysis.Layers[len(imageAnalysis.Layers)-1]
-
-	for _, f := range l.Layer.Features {
-		if len(f.Vulnerabilities) > 0 {
-			vulnerabilities := []v1.Vulnerability{}
-			for _, p := range invertedPriorities() {
-				for _, v := range f.Vulnerabilities {
-					if types.Priority(v.Severity) == p {
-						vulnerabilities = append(vulnerabilities, v)
+	for _, l := range imageAnalysis.Layers {
+		for _, f := range l.Layer.Features {
+			if len(f.Vulnerabilities) > 0 {
+				vulnerabilities := []v1.Vulnerability{}
+				for _, p := range invertedPriorities() {
+					for _, v := range f.Vulnerabilities {
+						if types.Priority(v.Severity) == p {
+							vulnerabilities = append(vulnerabilities, v)
+						}
 					}
 				}
+				nf := f
+				nf.Vulnerabilities = vulnerabilities
+				features = append(features, nf)
 			}
-			nf := f
-			nf.Vulnerabilities = vulnerabilities
-			features = append(features, nf)
 		}
 	}
 

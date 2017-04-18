@@ -32,6 +32,7 @@ var reportCmd = &cobra.Command{
 		}
 
 		analyzes := clair.Analyze(image, manifest)
+		// fmt.Printf("analyzes: %#v\n", analyzes)
 		imageName := strings.Replace(analyzes.ImageName, "/", "-", -1)
 		if analyzes.Tag != "" {
 			imageName += "-" + analyzes.Tag
