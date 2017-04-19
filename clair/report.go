@@ -33,6 +33,7 @@ func ReportAsHTML(analyzes ImageAnalysis) (string, error) {
 		"vulnerabilities":       vulnerabilities,
 		"allVulnerabilities":    allVulnerabilities,
 		"sortedVulnerabilities": sortedVulnerabilities,
+		"sortedVulnerabilitiesByLayer": sortedVulnerabilitiesByLayer,
 	}
 
 	templte := template.Must(template.New("analysis-template").Funcs(funcs).Parse(string(asset)))
@@ -110,6 +111,35 @@ func vulnerabilities(imageAnalysis ImageAnalysis) map[types.Priority][]vulnerabi
 				result[types.Priority(v.Severity)] = append(result[types.Priority(v.Severity)], vulnerabilityWithFeature{Vulnerability: v, Feature: f.Name + ":" + f.Version})
 			}
 		}
+	}
+
+	return result
+}
+
+// Return a map of SortedVulnerabilities grouped by layer and sorted by Severity within each layer
+func sortedVulnerabilitiesByLayer(imageAnalysis ImageAnalysis) []map[string][]v1.Feature {
+	result := []map[string][]v1.Feature{}
+
+	for _, l := range imageAnalysis.Layers {
+    layerWithVulns := make(map[string][]v1.Feature)
+	  features := []v1.Feature{}
+		for _, f := range l.Layer.Features {
+			if len(f.Vulnerabilities) > 0 {
+				vulnerabilities := []v1.Vulnerability{}
+				for _, p := range invertedPriorities() {
+					for _, v := range f.Vulnerabilities {
+						if types.Priority(v.Severity) == p {
+							vulnerabilities = append(vulnerabilities, v)
+						}
+					}
+				}
+				nf := f
+				nf.Vulnerabilities = vulnerabilities
+				features = append(features, nf)
+			}
+		}
+		layerWithVulns[l.Layer.Name] = features
+		result = append(result, layerWithVulns)
 	}
 
 	return result

@@ -509,11 +509,13 @@
             <div>
                 <div class="panel">
                     <div class="layers">
-                        <div id="{{.LastLayer.Name}}" class="layer">
-                            <h3 class="layer__title" data-toggle-layer="{{.LastLayer.Name}}">{{.LastLayer.Name}}</h3>
+                    {{ range sortedVulnerabilitiesByLayer . }}
+                      {{ range $layer_name, $features := . }}
+                        <div id="{{ $layer_name }}" class="layer">
+                            <h3 class="layer__title" data-toggle-layer="{{ $layer_name }}">{{ $layer_name }}</h3>
                             <div class="features">
                                 <ul>
-                                    {{ range sortedVulnerabilities $ia}}
+                                    {{ range $features }}
                                     <li class="feature">
                                         <div class="feature__title">
                                            <strong>{{ .Name }}</strong> <span>{{ .Version }}</span> - <span class="fa fa-exclamation-triangle" aria-hidden="true"></span>
@@ -533,6 +535,8 @@
                                 </ul>
                             </div>
                         </div>
+                      {{ end }}
+                    {{ end }}
                     </div>
                 </div>
                 <br />
