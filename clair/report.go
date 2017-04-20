@@ -8,6 +8,7 @@ import (
 
 	"github.com/coreos/clair/api/v1"
 	"github.com/coreos/clair/utils/types"
+	"github.com/deckarep/golang-set"
 )
 
 //execute go generate ./clair
@@ -22,6 +23,11 @@ type ReportConfig struct {
 	Format string
 }
 
+type MyType struct {
+	LayerVulnerabilityMap []map[string][]v1.Feature
+	UnpatchedFeaturesSet  mapset.Set
+}
+
 //ReportAsHTML report analysis as HTML
 func ReportAsHTML(analyzes ImageAnalysis) (string, error) {
 	asset, err := Asset("templates/analysis-template.html")
@@ -30,10 +36,11 @@ func ReportAsHTML(analyzes ImageAnalysis) (string, error) {
 	}
 
 	funcs := template.FuncMap{
-		"vulnerabilities":       vulnerabilities,
-		"allVulnerabilities":    allVulnerabilities,
-		"sortedVulnerabilities": sortedVulnerabilities,
+		"vulnerabilities":              vulnerabilities,
+		"allVulnerabilities":           allVulnerabilities,
+		"sortedVulnerabilities":        sortedVulnerabilities,
 		"sortedVulnerabilitiesByLayer": sortedVulnerabilitiesByLayer,
+		"isInSet":                      isInSet,
 	}
 
 	templte := template.Must(template.New("analysis-template").Funcs(funcs).Parse(string(asset)))
@@ -117,17 +124,27 @@ func vulnerabilities(imageAnalysis ImageAnalysis) map[types.Priority][]vulnerabi
 }
 
 // Return a map of SortedVulnerabilities grouped by layer and sorted by Severity within each layer
-func sortedVulnerabilitiesByLayer(imageAnalysis ImageAnalysis) []map[string][]v1.Feature {
+func sortedVulnerabilitiesByLayer(imageAnalysis ImageAnalysis) MyType {
 	result := []map[string][]v1.Feature{}
+	vulnerableFeatures := mapset.NewSet()
+	patchedFeatures := mapset.NewSet()
+	allFeatures := mapset.NewSet()
 
 	for _, l := range imageAnalysis.Layers {
-    layerWithVulns := make(map[string][]v1.Feature)
-	  features := []v1.Feature{}
+		layerWithVulns := make(map[string][]v1.Feature)
+		features := []v1.Feature{}
 		for _, f := range l.Layer.Features {
+			allFeatures.Add(f.Name + "@" + f.Version)
 			if len(f.Vulnerabilities) > 0 {
+				vulnerableFeatures.Add(f.Name + "@" + f.Version)
 				vulnerabilities := []v1.Vulnerability{}
+
 				for _, p := range invertedPriorities() {
 					for _, v := range f.Vulnerabilities {
+						// Accumulate all features that fix vulnerabilities
+						if v.FixedBy != "" {
+							patchedFeatures.Add(f.Name + "@" + v.FixedBy)
+						}
 						if types.Priority(v.Severity) == p {
 							vulnerabilities = append(vulnerabilities, v)
 						}
@@ -142,7 +159,24 @@ func sortedVulnerabilitiesByLayer(imageAnalysis ImageAnalysis) []map[string][]v1
 		result = append(result, layerWithVulns)
 	}
 
-	return result
+	unpatchedFeatures := vulnerableFeatures.Difference(allFeatures.Intersect(patchedFeatures))
+	fmt.Printf("VULNERABLE FEATURES: %d\n", vulnerableFeatures.Cardinality())
+	fmt.Println(vulnerableFeatures)
+	fmt.Printf("PATCHED FEATURES: %d\n", patchedFeatures.Cardinality())
+	fmt.Println(patchedFeatures)
+	fmt.Printf("ALL FEATURES: %d\n", allFeatures.Cardinality())
+	fmt.Println(allFeatures)
+	fmt.Printf("UNPATCHED FEATURES: %d\n", unpatchedFeatures.Cardinality())
+	fmt.Println(unpatchedFeatures)
+
+	return MyType{
+		LayerVulnerabilityMap: result,
+		UnpatchedFeaturesSet:  unpatchedFeatures,
+	}
+}
+
+func isInSet(member string, set mapset.Set) bool {
+	return set.Contains(member)
 }
 
 // SortedVulnerabilities get all vulnerabilities sorted by Severity

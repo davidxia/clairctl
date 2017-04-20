@@ -510,14 +510,15 @@
                 <div class="panel">
                     <div class="layers">
                     {{ range sortedVulnerabilitiesByLayer . }}
-                      {{ range $layer_name, $features := . }}
+                      {{ $bar := .UnpatchedFeaturesSet }}
+                      {{ range $layer_name, $features := .LayerVulnerabilityMap }}
                         <div id="{{ $layer_name }}" class="layer">
                             <h3 class="layer__title" data-toggle-layer="{{ $layer_name }}">{{ $layer_name }}</h3>
                             <div class="features">
                                 <ul>
                                     {{ range $features }}
                                     <li class="feature">
-                                        <div class="feature__title">
+                                        <div class="feature__title{{ if isInSet .Name $bar }} unpatched{{end}}">
                                            <strong>{{ .Name }}</strong> <span>{{ .Version }}</span> - <span class="fa fa-exclamation-triangle" aria-hidden="true"></span>
                                         </div>
                                         {{ range .Vulnerabilities}}
