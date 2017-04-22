@@ -90,9 +90,13 @@ func allVulnerabilities(imageAnalysis ImageAnalysis) vulnerabiliesCounts {
 	l := imageAnalysis.MostRecentLayer()
 
 	for _, f := range l.Layer.Features {
+	log.Debugf("%v", l)
 
+	log.Debug("BBB")
 		for _, v := range f.Vulnerabilities {
+	log.Debug("CCC")
 			result[types.Priority(v.Severity)]++
+	log.Debug("DDD")
 		}
 	}
 

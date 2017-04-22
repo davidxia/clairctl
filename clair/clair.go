@@ -18,7 +18,7 @@ var healthURI string
 //ImageAnalysis Full image analysis
 type ImageAnalysis struct {
 	Registry, ImageName, Tag string
-	Layers                   []v1.LayerEnvelope
+	Layer                    v1.LayerEnvelope
 }
 
 func (imageAnalysis ImageAnalysis) String() string {
@@ -27,7 +27,7 @@ func (imageAnalysis ImageAnalysis) String() string {
 
 //MostRecentLayer returns the most recent layer of an ImageAnalysis object
 func (imageAnalysis ImageAnalysis) MostRecentLayer() v1.LayerEnvelope {
-	return imageAnalysis.Layers[0]
+	return imageAnalysis.Layer
 }
 
 func (imageAnalysis ImageAnalysis) CountVulnerabilities(l v1.Layer) int {
